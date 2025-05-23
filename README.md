@@ -5,10 +5,11 @@ A template repository for creating Eagle plugins with automated build and releas
 ## Features
 
 - 🚀 Automated build and release process
-- 📦 Flexible package configuration
+- 📦 Flexible package configuration with pattern matching
 - 🔧 Development and production builds
 - 🎯 GitHub Actions integration
 - 📝 Manifest management
+- 🔍 Smart file inclusion patterns
 
 ## Getting Started
 
@@ -33,6 +34,7 @@ A template repository for creating Eagle plugins with automated build and releas
 3. Configure package rules:
    - Edit `.github/configs/pkgRules.json`
    - Add files and directories to include in your package
+   - Use pattern matching for flexible file inclusion
 
 ## Project Structure
 
@@ -88,16 +90,24 @@ To trigger a build:
 
 ### Package Rules
 
-Edit `.github/configs/pkgRules.json` to specify which files to include:
+Edit `.github/configs/pkgRules.json` to specify which files to include. The configuration supports pattern matching:
+
 ```json
 {
     "includes": [
-        "src",
-        "manifest.json"
-        // Add more patterns as needed
+        "manifest.json",    // Exact match
+        "*.js",            // All JavaScript files
+        "src/*",           // All files in src directory
+        "assets/*.png",    // All PNG files in assets
+        "docs/*.md"        // All Markdown files in docs
     ]
 }
 ```
+
+Pattern matching supports:
+- Exact matches: `"manifest.json"`
+- Ends with: `"*.js"` (matches all .js files)
+- Starts with: `"src/*"` (matches all files in src directory)
 
 ### Manifest
 
@@ -106,6 +116,19 @@ Your `manifest.json` should include:
 - Version
 - Required permissions
 - Other Eagle-specific configurations
+
+Example manifest:
+```json
+{
+    "name": "Your Plugin Name",
+    "version": "1.0.0",
+    "devTools": false,
+    "permissions": [
+        "storage",
+        "activeTab"
+    ]
+}
+```
 
 ## Contributing
 

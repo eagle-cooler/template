@@ -85,32 +85,15 @@ jobs:
         cp manifest.json.bak manifest.json
 
     - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v1
+      if: github.event_name != 'pull_request'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: "v${{ env.MANIFEST_VERSION }}"
-        release_name: "v${{ env.MANIFEST_VERSION }}"
+        tag_name: v${{ env.MANIFEST_VERSION }}
+        name: v${{ env.MANIFEST_VERSION }}
+        files: |
+          ${{ env.PROD_ZIP }}
+          ${{ env.DEBUG_ZIP }}
         draft: false
-        prerelease: false
-
-    - name: Upload Production Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./${{ env.PROD_ZIP }}
-        asset_name: ${{ env.MANIFEST_NAME }}-${{ env.MANIFEST_VERSION }}.eagleplugin
-        asset_content_type: application/zip
-
-    - name: Upload Debug Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./${{ env.DEBUG_ZIP }}
-        asset_name: ${{ env.MANIFEST_NAME }}-${{ env.MANIFEST_VERSION }}-debug.eagleplugin
-        asset_content_type: application/zip 
+        prerelease: false 
