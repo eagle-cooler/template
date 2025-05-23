@@ -1,0 +1,105 @@
+name: Flexible Eagle Plugin Package
+
+on:
+  push:
+    paths:
+      - 'manifest.json'
+      - '.github/configs/pkgRules.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write 
+
+env:
+  PATH_TO_PACKAGE: "."
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+
+    - name: Install zip
+      run: sudo apt-get install zip
+
+    - name: Read manifest.json
+      id: read_manifest
+      run: |
+        # First check if name contains localization markers
+        raw_name=$(jq -r '.name' ${{ env.PATH_TO_PACKAGE }}/manifest.json)
+        if [[ "$raw_name" == *"{{"* ]]; then
+          # If name is localized, get it from _locales/en.json
+          manifest_name=$(jq -r '.manifest.app.name' ${{ env.PATH_TO_PACKAGE }}/_locales/en.json)
+          echo "Using localized name from ${{ env.PATH_TO_PACKAGE }}/_locales/en.json"
+        else
+          # Otherwise use the raw name from manifest.json
+          manifest_name=$raw_name
+        fi
+        # Get version as before
+        manifest_version=$(jq -r '.version' ${{ env.PATH_TO_PACKAGE }}/manifest.json)
+        # Set environment variables
+        echo "MANIFEST_NAME=$manifest_name" >> $GITHUB_ENV
+        echo "MANIFEST_VERSION=$manifest_version" >> $GITHUB_ENV
+
+    - name: Check if release exists
+      id: check_release
+      run: |
+        release_id=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/repos/${{ github.repository }}/releases/tags/v${{ env.MANIFEST_VERSION }}" | jq -r '.id')
+        if [ "$release_id" != "null" ]; then
+          echo "Release already exists. Exiting."
+          exit 0
+        fi
+
+    - name: Process manifests and create zips
+      id: process_manifests
+      run: |
+        # Process production manifest
+        PROD_TYPE=$(node .github/scripts/process-manifest.js false)
+        PROD_ZIP=$(node .github/scripts/create-zip.js $PROD_TYPE)
+        echo "PROD_ZIP=$PROD_ZIP" >> $GITHUB_ENV
+        
+        # Process debug manifest
+        DEBUG_TYPE=$(node .github/scripts/process-manifest.js true)
+        DEBUG_ZIP=$(node .github/scripts/create-zip.js $DEBUG_TYPE)
+        echo "DEBUG_ZIP=$DEBUG_ZIP" >> $GITHUB_ENV
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: "v${{ env.MANIFEST_VERSION }}"
+        release_name: "v${{ env.MANIFEST_VERSION }}"
+        draft: false
+        prerelease: false
+
+    - name: Upload Production Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./${{ env.PROD_ZIP }}
+        asset_name: ${{ env.MANIFEST_NAME }}-${{ env.MANIFEST_VERSION }}.eagleplugin
+        asset_content_type: application/zip
+
+    - name: Upload Debug Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./${{ env.DEBUG_ZIP }}
+        asset_name: ${{ env.MANIFEST_NAME }}-${{ env.MANIFEST_VERSION }}-debug.eagleplugin
+        asset_content_type: application/zip 
