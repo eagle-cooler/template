@@ -123,6 +123,29 @@ The update process will:
 Protected files (never updated):
 - `.github/workflows/update-gitops.yml`
 
+#### Automatic Updates
+
+The template includes an automatic update system that runs daily to keep your repository in sync with the template:
+
+1. **Setup Required**: To enable automatic updates, you need to manually copy the `subscribable-gitops.yml` file:
+   ```bash
+   # Copy the workflow file to your repository's workflows directory
+   cp subscribable-gitops.yml .github/workflows/update-template.yml
+   ```
+
+2. **Daily Updates**: The system automatically checks for updates at midnight every day
+3. **Cron Control**: You can control automatic updates by setting `allowCron` in `.github/configs/templateTarget.json`:
+   ```json
+   {
+       "source": "https://github.com/eagle-cooler/template.git",
+       "branch": "main",
+       "allowCron": true  // Set to false to disable automatic updates
+   }
+   ```
+4. **Manual Triggers**: You can still manually trigger updates from the Actions tab
+5. **Safe Updates**: The system preserves your customizations and protected files
+6. **Change Detection**: Updates only occur when there are actual changes to apply
+
 ## Configuration
 
 ### Package Rules

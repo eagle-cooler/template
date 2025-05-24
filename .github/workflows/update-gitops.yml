@@ -1,6 +1,7 @@
 name: Update Template Files
 
 on:
+  workflow_call:
   workflow_dispatch:
 
 jobs:
