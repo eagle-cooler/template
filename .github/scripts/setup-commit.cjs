@@ -4,7 +4,7 @@ const path = require('path');
 const preCommitContent = `#!/bin/sh
 
 # Run the manifest check
-node .github/scripts/check-manifest.js
+node .github/scripts/check-manifest.cjs
 
 # Capture the exit code
 RESULT=$?
@@ -21,7 +21,7 @@ exit 0`;
 const postCommitContent = `#!/bin/sh
 
 # Restore original manifest value
-node .github/scripts/restore-manifest.js`;
+node .github/scripts/restore-manifest.cjs`;
 
 const preCommitPath = path.join(__dirname, '..', '..', '.git', 'hooks', 'pre-commit');
 const postCommitPath = path.join(__dirname, '..', '..', '.git', 'hooks', 'post-commit');
@@ -67,7 +67,7 @@ function installHooks() {
     console.log('The hooks will now:');
     console.log('1. Check and fix manifest.json before commit');
     console.log('2. Restore original manifest.json value after commit');
-    console.log('To test it, try running: node .github/scripts/check-manifest.js');
+    console.log('To test it, try running: node .github/scripts/check-manifest.cjs');
   } catch (error) {
     console.error('❌ Error installing hooks:', error.message);
     process.exit(1);

@@ -82,12 +82,12 @@ eagle-template/
 2. Test the build process:
    ```bash
    # Create debug version
-   node .github/scripts/process-manifest.js true
-   node .github/scripts/create-zip.js debug
+   node .github/scripts/process-manifest.cjs true
+   node .github/scripts/create-zip.cjs debug
 
    # Create production version
-   node .github/scripts/process-manifest.js false
-   node .github/scripts/create-zip.js release
+   node .github/scripts/process-manifest.cjs false
+   node .github/scripts/create-zip.cjs release
    ```
 
 ### Building
