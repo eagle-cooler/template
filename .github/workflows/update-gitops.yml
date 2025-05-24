@@ -30,54 +30,68 @@ jobs:
 
       - name: Update workflow files
         run: |
-          # Create a temporary directory for comparison
+          # Create necessary directories
+          mkdir -p .github/workflows
           mkdir -p temp_workflows
           
-          # Copy existing workflows
-          cp -r .github/workflows/* temp_workflows/
+          # Copy existing workflows if they exist
+          if [ -d ".github/workflows" ] && [ "$(ls -A .github/workflows 2>/dev/null)" ]; then
+            cp -r .github/workflows/* temp_workflows/ 2>/dev/null || true
+          fi
           
           # Protected files that should never be overwritten
           PROTECTED_FILES=("update-template.yml" "update-gitops.yml")
           
           # Update only matching files from template
-          for file in template-repo/.github/workflows/*; do
-            filename=$(basename "$file")
-            # Skip if file is protected
-            if [[ " ${PROTECTED_FILES[@]} " =~ " ${filename} " ]]; then
-              echo "Skipping protected workflow: $filename"
-              continue
-            fi
-            # Only update if file exists in current repo
-            if [ -f ".github/workflows/$filename" ]; then
-              echo "Updating workflow: $filename"
-              cp "$file" ".github/workflows/$filename"
-            fi
-          done
+          if [ -d "template-repo/.github/workflows" ]; then
+            for file in template-repo/.github/workflows/*; do
+              if [ -f "$file" ]; then
+                filename=$(basename "$file")
+                # Skip if file is protected
+                if [[ " ${PROTECTED_FILES[@]} " =~ " ${filename} " ]]; then
+                  echo "Skipping protected workflow: $filename"
+                  continue
+                fi
+                # Only update if file exists in current repo
+                if [ -f ".github/workflows/$filename" ]; then
+                  echo "Updating workflow: $filename"
+                  cp "$file" ".github/workflows/$filename"
+                fi
+              fi
+            done
+          fi
 
       - name: Update script files
         run: |
-          # Create a temporary directory for comparison
+          # Create necessary directories
+          mkdir -p .github/scripts
           mkdir -p temp_scripts
           
-          # Copy existing scripts
-          cp -r .github/scripts/* temp_scripts/
+          # Copy existing scripts if they exist
+          if [ -d ".github/scripts" ] && [ "$(ls -A .github/scripts 2>/dev/null)" ]; then
+            cp -r .github/scripts/* temp_scripts/ 2>/dev/null || true
+          fi
           
           # Update only matching files from template
-          for file in template-repo/.github/scripts/*; do
-            filename=$(basename "$file")
-            if [ -f ".github/scripts/$filename" ]; then
-              echo "Updating script: $filename"
-              cp "$file" ".github/scripts/$filename"
-            fi
-          done
+          if [ -d "template-repo/.github/scripts" ]; then
+            for file in template-repo/.github/scripts/*; do
+              if [ -f "$file" ]; then
+                filename=$(basename "$file")
+                if [ -f ".github/scripts/$filename" ]; then
+                  echo "Updating script: $filename"
+                  cp "$file" ".github/scripts/$filename"
+                fi
+              fi
+            done
+          fi
 
       - name: Check for changes
         id: git-check
         run: |
           # Don't stage protected files
-          git add .github/workflows/*.yml
-          git reset .github/workflows/update-template.yml .github/workflows/update-gitops.yml
-          git add .github/scripts/
+          git add .github/workflows/*.yml 2>/dev/null || true
+          git reset .github/workflows/update-template.yml .github/workflows/update-gitops.yml 2>/dev/null || true
+          git add .github/scripts/ 2>/dev/null || true
           git diff --staged --quiet || echo "changes=true" >> $GITHUB_OUTPUT
 
       - name: Commit and push changes
