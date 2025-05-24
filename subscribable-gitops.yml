@@ -16,6 +16,12 @@ jobs:
     if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.simulate_schedule == 'true')
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
+
       - name: Check if cron is allowed
         run: |
           if [ -f ".github/configs/templateTarget.json" ]; then
