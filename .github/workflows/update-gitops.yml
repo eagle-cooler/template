@@ -1,0 +1,103 @@
+name: Update Template Files
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update-template:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Read template configuration
+        id: template-config
+        run: |
+          TEMPLATE_CONFIG=$(cat .github/configs/templateTarget.json)
+          echo "source=$(echo $TEMPLATE_CONFIG | jq -r '.source')" >> $GITHUB_OUTPUT
+          echo "branch=$(echo $TEMPLATE_CONFIG | jq -r '.branch')" >> $GITHUB_OUTPUT
+
+      - name: Clone template repository
+        run: |
+          git clone --depth 1 --branch ${{ steps.template-config.outputs.branch }} ${{ steps.template-config.outputs.source }} template-repo
+
+      - name: Update workflow files
+        run: |
+          # Create necessary directories
+          mkdir -p .github/workflows
+          mkdir -p temp_workflows
+          
+          # Copy existing workflows if they exist
+          if [ -d ".github/workflows" ] && [ "$(ls -A .github/workflows 2>/dev/null)" ]; then
+            cp -r .github/workflows/* temp_workflows/ 2>/dev/null || true
+          fi
+          
+          # Protected files that should never be overwritten
+          PROTECTED_FILES=("update-template.yml" "update-gitops.yml")
+          
+          # Update only matching files from template
+          if [ -d "template-repo/.github/workflows" ]; then
+            for file in template-repo/.github/workflows/*; do
+              if [ -f "$file" ]; then
+                filename=$(basename "$file")
+                # Skip if file is protected
+                if [[ " ${PROTECTED_FILES[@]} " =~ " ${filename} " ]]; then
+                  echo "Skipping protected workflow: $filename"
+                  continue
+                fi
+                # Only update if file exists in current repo
+                if [ -f ".github/workflows/$filename" ]; then
+                  echo "Updating workflow: $filename"
+                  cp "$file" ".github/workflows/$filename"
+                fi
+              fi
+            done
+          fi
+
+      - name: Update script files
+        run: |
+          # Create necessary directories
+          mkdir -p .github/scripts
+          mkdir -p temp_scripts
+          
+          # Copy existing scripts if they exist
+          if [ -d ".github/scripts" ] && [ "$(ls -A .github/scripts 2>/dev/null)" ]; then
+            cp -r .github/scripts/* temp_scripts/ 2>/dev/null || true
+          fi
+          
+          # Update only matching files from template
+          if [ -d "template-repo/.github/scripts" ]; then
+            for file in template-repo/.github/scripts/*; do
+              if [ -f "$file" ]; then
+                filename=$(basename "$file")
+                if [ -f ".github/scripts/$filename" ]; then
+                  echo "Updating script: $filename"
+                  cp "$file" ".github/scripts/$filename"
+                fi
+              fi
+            done
+          fi
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          # Don't stage protected files
+          git add .github/workflows/*.yml 2>/dev/null || true
+          git reset .github/workflows/update-template.yml .github/workflows/update-gitops.yml 2>/dev/null || true
+          git add .github/scripts/ 2>/dev/null || true
+          git diff --staged --quiet || echo "changes=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push changes
+        if: steps.git-check.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git commit -m "chore: update template files from source repository"
+          git push 
