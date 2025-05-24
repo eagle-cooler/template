@@ -1,5 +1,23 @@
 name: Flexible Eagle Plugin Package
 
+# Branch Filtering Documentation
+# ----------------------------
+# The workflow filters branches in the following way:
+# 1. If pkgRules.json exists and has a 'branches' field:
+#    - Only allows branches that match patterns in the branches array
+#    - Supports wildcard patterns (e.g., "feature/*", "release/*")
+#    - Patterns are converted to regex (e.g., "feature/*" becomes "feature/.*")
+# 2. If pkgRules.json exists but has no 'branches' field:
+#    - Only allows the 'main' branch
+# 3. If pkgRules.json doesn't exist:
+#    - Only allows the 'main' branch
+#
+# Example pkgRules.json with branch filtering:
+# {
+#   "branches": ["main", "release/*", "feature/*"],
+#   "includes": ["manifest.json", "src/*"]
+# }
+
 on:
   push:
     paths:
