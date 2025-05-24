@@ -10,6 +10,7 @@ A template repository for creating Eagle plugins with automated build and releas
 - 🎯 GitHub Actions integration
 - 📝 Manifest management
 - 🔍 Smart file inclusion patterns
+- 🔄 Automatic template updates
 
 ## Getting Started
 
@@ -18,6 +19,7 @@ A template repository for creating Eagle plugins with automated build and releas
 - Node.js 14 or higher
 - Git
 - Eagle application
+- GitHub Personal Access Token (for template updates)
 
 ### Installation
 
@@ -36,18 +38,32 @@ A template repository for creating Eagle plugins with automated build and releas
    - Add files and directories to include in your package
    - Use pattern matching for flexible file inclusion
 
+4. Set up template updates:
+   - Create a GitHub Personal Access Token (PAT) with `repo` and `workflow` permissions
+   - Go to your repository settings > Secrets and variables > Actions
+   - Add a new secret named `GH_TOKEN` with your PAT value
+   - Edit `.github/configs/templateTarget.json` to point to your template source:
+     ```json
+     {
+         "source": "https://github.com/eagle-cooler/template.git",
+         "branch": "main"
+     }
+     ```
+
 ## Project Structure
 
 ```
 eagle-template/
 ├── .github/
 │   ├── configs/
-│   │   └── pkgRules.json    # Package inclusion rules
+│   │   ├── pkgRules.json        # Package inclusion rules
+│   │   └── templateTarget.json  # Template update configuration
 │   ├── scripts/
 │   │   ├── process-manifest.js  # Manifest processing
 │   │   └── create-zip.js        # Package creation
 │   └── workflows/
-│       └── eagle-plugin-pkg.yml # Build workflow
+│       ├── eagle-plugin-pkg.yml # Build workflow
+│       └── update-gitops.yml    # Template update workflow
 ├── src/                    # Your plugin source code
 └── manifest.json          # Plugin manifest
 ```
@@ -86,6 +102,27 @@ To trigger a build:
 - Push changes to pkgRules.json
 - Manually trigger the workflow from GitHub Actions
 
+### Template Updates
+
+The repository includes an automated template update system that:
+1. Keeps your plugin up to date with the latest template changes
+2. Preserves your customizations while updating common files
+3. Protects critical files from being overwritten
+
+To update from the template:
+1. Ensure your `GH_TOKEN` secret is properly configured
+2. Go to Actions > Update Template Files
+3. Click "Run workflow"
+
+The update process will:
+- Copy new workflow files (except protected ones)
+- Update script files
+- Preserve your customizations
+- Create a commit with the changes
+
+Protected files (never updated):
+- `.github/workflows/update-gitops.yml`
+
 ## Configuration
 
 ### Package Rules
@@ -109,26 +146,6 @@ Pattern matching supports:
 - Ends with: `"*.js"` (matches all .js files)
 - Starts with: `"src/*"` (matches all files in src directory)
 
-### Manifest
-
-Your `manifest.json` should include:
-- Plugin name
-- Version
-- Required permissions
-- Other Eagle-specific configurations
-
-Example manifest:
-```json
-{
-    "name": "Your Plugin Name",
-    "version": "1.0.0",
-    "devTools": false,
-    "permissions": [
-        "storage",
-        "activeTab"
-    ]
-}
-```
 
 ## Contributing
 

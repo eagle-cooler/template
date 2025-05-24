@@ -11,11 +11,19 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Ensure required directories exist
+        run: |
+          mkdir -p .github/workflows
+          mkdir -p .github/scripts
+          mkdir -p .github/configs
+          echo "Created required directories"
 
       - name: Read template configuration
         id: template-config
@@ -30,19 +38,10 @@ jobs:
 
       - name: Update workflow files
         run: |
-          # Create necessary directories
-          mkdir -p .github/workflows
-          mkdir -p temp_workflows
-          
-          # Copy existing workflows if they exist
-          if [ -d ".github/workflows" ] && [ "$(ls -A .github/workflows 2>/dev/null)" ]; then
-            cp -r .github/workflows/* temp_workflows/ 2>/dev/null || true
-          fi
-          
           # Protected files that should never be overwritten
-          PROTECTED_FILES=("update-template.yml" "update-gitops.yml")
+          PROTECTED_FILES=("update-gitops.yml")
           
-          # Update only matching files from template
+          # Copy all workflow files from template
           if [ -d "template-repo/.github/workflows" ]; then
             for file in template-repo/.github/workflows/*; do
               if [ -f "$file" ]; then
@@ -52,35 +51,21 @@ jobs:
                   echo "Skipping protected workflow: $filename"
                   continue
                 fi
-                # Only update if file exists in current repo
-                if [ -f ".github/workflows/$filename" ]; then
-                  echo "Updating workflow: $filename"
-                  cp "$file" ".github/workflows/$filename"
-                fi
+                echo "Copying workflow: $filename"
+                cp "$file" ".github/workflows/$filename"
               fi
             done
           fi
 
       - name: Update script files
         run: |
-          # Create necessary directories
-          mkdir -p .github/scripts
-          mkdir -p temp_scripts
-          
-          # Copy existing scripts if they exist
-          if [ -d ".github/scripts" ] && [ "$(ls -A .github/scripts 2>/dev/null)" ]; then
-            cp -r .github/scripts/* temp_scripts/ 2>/dev/null || true
-          fi
-          
-          # Update only matching files from template
+          # Copy all script files from template
           if [ -d "template-repo/.github/scripts" ]; then
             for file in template-repo/.github/scripts/*; do
               if [ -f "$file" ]; then
                 filename=$(basename "$file")
-                if [ -f ".github/scripts/$filename" ]; then
-                  echo "Updating script: $filename"
-                  cp "$file" ".github/scripts/$filename"
-                fi
+                echo "Copying script: $filename"
+                cp "$file" ".github/scripts/$filename"
               fi
             done
           fi
@@ -88,10 +73,20 @@ jobs:
       - name: Check for changes
         id: git-check
         run: |
+          echo "=== Git Status Before Staging ==="
+          git status
+          
           # Don't stage protected files
           git add .github/workflows/*.yml 2>/dev/null || true
           git reset .github/workflows/update-template.yml .github/workflows/update-gitops.yml 2>/dev/null || true
           git add .github/scripts/ 2>/dev/null || true
+          
+          echo "=== Git Status After Staging ==="
+          git status
+          
+          echo "=== Staged Changes ==="
+          git diff --staged --name-only
+          
           git diff --staged --quiet || echo "changes=true" >> $GITHUB_OUTPUT
 
       - name: Commit and push changes
@@ -100,4 +95,5 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git commit -m "chore: update template files from source repository"
+          git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}
           git push 
